@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-Φ — Treasury Intelligence Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=JetBrains+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06080f;--bg2:#0b0e18;
+  --txt:#e8eaf0;--txt2:#8b92a8;--txt3:#565e78;
+  --blue:#3b82f6;--blue-glow:rgba(59,130,246,0.3);
+  --gold:#d4a843;--gold-glow:rgba(212,168,67,0.25);
+  --teal:#22d3a7;--teal-glow:rgba(34,211,167,0.2);
+  --purple:#a78bfa;--purple-glow:rgba(167,139,250,0.2);
+  --pink:#f472b6;--coral:#fb923c;
+  --surface:rgba(255,255,255,0.03);
+  --border:rgba(255,255,255,0.06);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif}
+
+/* ═══ VIEWPORT SCALING ═══ */
+.stage{position:absolute;top:0;left:0;width:1920px;height:1080px;transform-origin:top left;overflow:hidden}
+
+/* ═══ GLOBAL CANVAS ═══ */
+canvas#particles{position:absolute;inset:0;z-index:0;pointer-events:none}
+.noise{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0.025;
+  background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ═══ SCENE SYSTEM ═══ */
+.scene{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;flex-direction:column;
+  opacity:0;transform:scale(0.97);transition:opacity 1.2s cubic-bezier(.22,.61,.36,1),transform 1.2s cubic-bezier(.22,.61,.36,1);pointer-events:none;padding:40px}
+.scene.active{opacity:1;transform:scale(1);pointer-events:auto}
+.scene.exiting{opacity:0;transform:scale(1.03)}
+
+/* ═══ PROGRESS BAR ═══ */
+.progress-wrap{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:100;display:flex;gap:8px;align-items:center}
+.progress-dot{width:6px;height:6px;border-radius:50%;background:var(--txt3);transition:all 0.5s ease;cursor:pointer}
+.progress-dot.active{width:28px;border-radius:3px;background:var(--blue)}
+.progress-dot.done{background:var(--txt2)}
+
+/* ═══ PLAY CONTROLS ═══ */
+.controls{position:absolute;bottom:32px;right:40px;z-index:100;display:flex;gap:12px;align-items:center}
+.ctrl-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--txt2);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.3s;font-size:14px;backdrop-filter:blur(10px)}
+.ctrl-btn:hover{border-color:var(--blue);color:var(--txt);background:rgba(59,130,246,0.1)}
+.timer{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--txt3);letter-spacing:1px}
+
+/* ═══ SCENE 0 — COLD OPEN ═══ */
+.cold-open{text-align:center}
+.cold-open .phi{font-family:'Playfair Display',serif;font-size:140px;font-weight:700;letter-spacing:-2px;
+  background:linear-gradient(135deg,var(--blue),var(--purple),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  opacity:0;animation:phiReveal 2s 0.5s forwards}
+.cold-open .tagline{font-size:16px;letter-spacing:6px;text-transform:uppercase;color:var(--txt3);margin-top:12px;
+  opacity:0;animation:fadeUp 1.2s 1.8s forwards}
+@keyframes phiReveal{0%{opacity:0;transform:scale(0.8) translateY(20px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes fadeUp{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
+
+/* ═══ SCENE 1 — PROBLEM ═══ */
+.problem{text-align:center;max-width:900px}
+.problem .scene-label{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--blue);margin-bottom:32px;
+  opacity:0;animation:fadeUp 0.8s 0.3s forwards}
+.problem h2{font-family:'Playfair Display',serif;font-size:52px;line-height:1.15;font-weight:400;
+  opacity:0;animation:fadeUp 1s 0.6s forwards}
+.problem h2 em{font-style:italic;color:var(--gold)}
+.problem .stats-row{display:flex;gap:48px;justify-content:center;margin-top:56px}
+.problem .stat-block{opacity:0;animation:fadeUp 0.8s forwards}
+.problem .stat-block:nth-child(1){animation-delay:1.2s}.problem .stat-block:nth-child(2){animation-delay:1.5s}.problem .stat-block:nth-child(3){animation-delay:1.8s}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:500;color:var(--teal)}
+.stat-label{font-size:13px;color:var(--txt2);margin-top:8px;letter-spacing:1px}
+
+/* ═══ SCENE 2 — HERO REVEAL ═══ */
+.hero-reveal{text-align:center;max-width:1000px}
+.hero-reveal .badge{display:inline-block;padding:8px 20px;border-radius:100px;border:1px solid var(--blue);
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--blue);margin-bottom:40px;
+  background:rgba(59,130,246,0.06);opacity:0;animation:fadeUp 0.8s 0.3s forwards}
+.hero-reveal h1{font-family:'Playfair Display',serif;font-size:72px;line-height:1.1;font-weight:400;
+  opacity:0;animation:fadeUp 1s 0.7s forwards}
+.hero-reveal h1 span{background:linear-gradient(135deg,var(--blue),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-reveal .sub{font-size:20px;color:var(--txt2);max-width:680px;margin:32px auto 0;line-height:1.65;
+  opacity:0;animation:fadeUp 1s 1.2s forwards}
+
+/* ═══ SCENE 3 — WORKFLOW ═══ */
+.workflow-scene{max-width:1100px;width:100%;text-align:center}
+.workflow-scene .scene-label{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--teal);margin-bottom:16px;
+  opacity:0;animation:fadeUp 0.8s 0.3s forwards}
+.workflow-scene h2{font-family:'Playfair Display',serif;font-size:44px;font-weight:400;margin-bottom:56px;
+  opacity:0;animation:fadeUp 0.8s 0.6s forwards}
+.wf-pipeline{display:flex;align-items:stretch;gap:0;position:relative}
+.wf-stage{flex:1;padding:32px 20px;position:relative;opacity:0;transform:translateX(-30px);
+  border-top:2px solid var(--border);transition:all 0.8s cubic-bezier(.22,.61,.36,1)}
+.wf-stage.visible{opacity:1;transform:translateX(0)}
+.wf-stage::after{content:'→';position:absolute;right:-12px;top:50%;transform:translateY(-50%);
+  color:var(--txt3);font-size:20px;z-index:5}
+.wf-stage:last-child::after{display:none}
+.wf-icon{font-size:32px;margin-bottom:16px}
+.wf-name{font-size:15px;font-weight:600;margin-bottom:8px;letter-spacing:0.5px}
+.wf-desc{font-size:12px;color:var(--txt2);line-height:1.6}
+.wf-stage:nth-child(1){border-color:var(--blue)}.wf-stage:nth-child(1) .wf-name{color:var(--blue)}
+.wf-stage:nth-child(2){border-color:var(--pink)}.wf-stage:nth-child(2) .wf-name{color:var(--pink)}
+.wf-stage:nth-child(3){border-color:var(--gold)}.wf-stage:nth-child(3) .wf-name{color:var(--gold)}
+.wf-stage:nth-child(4){border-color:var(--purple)}.wf-stage:nth-child(4) .wf-name{color:var(--purple)}
+.wf-stage:nth-child(5){border-color:var(--teal)}.wf-stage:nth-child(5) .wf-name{color:var(--teal)}
+
+/* ═══ SCENE 4 — FEATURES GRID ═══ */
+.features-scene{max-width:1100px;width:100%;text-align:center}
+.features-scene .scene-label{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--gold);margin-bottom:16px;
+  opacity:0;animation:fadeUp 0.8s 0.3s forwards}
+.features-scene h2{font-family:'Playfair Display',serif;font-size:44px;font-weight:400;margin-bottom:48px;
+  opacity:0;animation:fadeUp 0.8s 0.6s forwards}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;text-align:left;
+  opacity:0;transform:translateY(24px);transition:all 0.7s cubic-bezier(.22,.61,.36,1);position:relative;overflow:hidden}
+.feat-card.visible{opacity:1;transform:translateY(0)}
+.feat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:0;transition:opacity 0.5s}
+.feat-card.visible::before{opacity:1}
+.feat-card .icon{font-size:28px;margin-bottom:14px}
+.feat-card .name{font-size:15px;font-weight:600;margin-bottom:8px}
+.feat-card .desc{font-size:12px;color:var(--txt2);line-height:1.6}
+.feat-card .tag{display:inline-block;margin-top:12px;padding:3px 10px;border-radius:100px;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.tag-live{background:rgba(34,211,167,0.1);color:var(--teal);border:1px solid rgba(34,211,167,0.2)}
+.tag-ai{background:rgba(167,139,250,0.1);color:var(--purple);border:1px solid rgba(167,139,250,0.2)}
+
+/* ═══ SCENE 5 — UI STUDIO ═══ */
+.ai-scene{max-width:900px;width:100%;text-align:center}
+.ai-scene .scene-label{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--purple);margin-bottom:16px;
+  opacity:0;animation:fadeUp 0.8s 0.3s forwards}
+.ai-scene h2{font-family:'Playfair Display',serif;font-size:48px;font-weight:400;margin-bottom:20px;
+  opacity:0;animation:fadeUp 0.8s 0.6s forwards}
+.ai-scene h2 span{color:var(--purple)}
+.ai-scene .sub{font-size:17px;color:var(--txt2);margin-bottom:48px;opacity:0;animation:fadeUp 0.8s 0.9s forwards}
+.ai-terminal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:0;text-align:left;
+  overflow:hidden;opacity:0;animation:fadeUp 1s 1.2s forwards;width:100%;max-width:700px;margin:0 auto}
+.ai-term-bar{display:flex;align-items:center;gap:8px;padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)}
+.ai-term-dot{width:10px;height:10px;border-radius:50%}
+.ai-term-title{margin-left:auto;font-size:11px;color:var(--txt3);letter-spacing:1px;font-family:'JetBrains Mono',monospace}
+.ai-term-body{padding:28px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.8}
+.ai-prompt{color:var(--purple)}
+.ai-response{color:var(--teal);opacity:0}
+.ai-response.typed{animation:fadeIn 0.6s forwards}
+.ai-cursor{display:inline-block;width:8px;height:16px;background:var(--purple);animation:blink 1s step-end infinite;vertical-align:middle;margin-left:2px}
+@keyframes blink{50%{opacity:0}}
+@keyframes fadeIn{to{opacity:1}}
+
+/* ═══ SCENE 6 — ARCHITECTURE ═══ */
+.arch-scene{max-width:1000px;width:100%;text-align:center}
+.arch-scene .scene-label{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--coral);margin-bottom:16px;
+  opacity:0;animation:fadeUp 0.8s 0.3s forwards}
+.arch-scene h2{font-family:'Playfair Display',serif;font-size:44px;font-weight:400;margin-bottom:48px;
+  opacity:0;animation:fadeUp 0.8s 0.6s forwards}
+.arch-layers{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.arch-layer{width:200px;padding:28px 20px;border-radius:16px;opacity:0;transform:translateY(30px);
+  transition:all 0.7s cubic-bezier(.22,.61,.36,1)}
+.arch-layer.visible{opacity:1;transform:translateY(0)}
+.arch-layer .layer-num{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.arch-layer .layer-icon{font-size:36px;margin-bottom:14px}
+.arch-layer .layer-name{font-size:15px;font-weight:600;margin-bottom:8px}
+.arch-layer .layer-desc{font-size:12px;line-height:1.6}
+.arch-l1{background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)}
+.arch-l1 .layer-num,.arch-l1 .layer-name{color:var(--blue)}
+.arch-l1 .layer-desc{color:var(--txt2)}
+.arch-l2{background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.15)}
+.arch-l2 .layer-num,.arch-l2 .layer-name{color:var(--purple)}
+.arch-l2 .layer-desc{color:var(--txt2)}
+.arch-l3{background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.15)}
+.arch-l3 .layer-num,.arch-l3 .layer-name{color:var(--gold)}
+.arch-l3 .layer-desc{color:var(--txt2)}
+.arch-l4{background:rgba(34,211,167,0.06);border:1px solid rgba(34,211,167,0.15)}
+.arch-l4 .layer-num,.arch-l4 .layer-name{color:var(--teal)}
+.arch-l4 .layer-desc{color:var(--txt2)}
+
+/* ═══ SCENE 7 — SECURITY ═══ */
+.security-scene{max-width:800px;width:100%;text-align:center}
+.security-scene .scene-label{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--teal);margin-bottom:16px;
+  opacity:0;animation:fadeUp 0.8s 0.3s forwards}
+.security-scene h2{font-family:'Playfair Display',serif;font-size:44px;font-weight:400;margin-bottom:48px;
+  opacity:0;animation:fadeUp 0.8s 0.6s forwards}
+.sec-list{display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:left}
+.sec-item{display:flex;gap:14px;align-items:flex-start;padding:20px;border-radius:12px;background:var(--surface);
+  border:1px solid var(--border);opacity:0;transform:translateY(20px);transition:all 0.6s cubic-bezier(.22,.61,.36,1)}
+.sec-item.visible{opacity:1;transform:translateY(0)}
+.sec-check{width:28px;height:28px;border-radius:50%;background:rgba(34,211,167,0.1);color:var(--teal);
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;font-weight:700}
+.sec-name{font-size:14px;font-weight:600;margin-bottom:4px}
+.sec-desc{font-size:12px;color:var(--txt2);line-height:1.5}
+
+/* ═══ SCENE 8 — CTA ═══ */
+.cta-scene{text-align:center;max-width:800px}
+.cta-scene h2{font-family:'Playfair Display',serif;font-size:60px;line-height:1.1;font-weight:400;
+  opacity:0;animation:fadeUp 1s 0.4s forwards}
+.cta-scene h2 span{background:linear-gradient(135deg,var(--blue),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.cta-scene .sub{font-size:18px;color:var(--txt2);margin:28px auto 44px;max-width:560px;line-height:1.65;
+  opacity:0;animation:fadeUp 0.8s 1s forwards}
+.cta-btns{display:flex;gap:16px;justify-content:center;opacity:0;animation:fadeUp 0.8s 1.4s forwards}
+.cta-btn{padding:16px 40px;border-radius:12px;font-size:15px;font-weight:600;letter-spacing:0.5px;
+  text-decoration:none;transition:all 0.3s;font-family:'DM Sans',sans-serif;cursor:pointer;border:none}
+.cta-primary{background:var(--blue);color:#fff;box-shadow:0 0 40px var(--blue-glow)}
+.cta-primary:hover{transform:translateY(-2px);box-shadow:0 0 60px var(--blue-glow)}
+.cta-ghost{background:transparent;color:var(--txt);border:1px solid var(--border)}
+.cta-ghost:hover{border-color:var(--blue);background:rgba(59,130,246,0.06)}
+.cta-url{margin-top:32px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--txt3);letter-spacing:1px;
+  opacity:0;animation:fadeUp 0.6s 1.8s forwards}
+.cta-url a{color:var(--blue);text-decoration:none}
+
+/* ═══ AMBIENT GLOW ═══ */
+.glow{position:fixed;width:500px;height:500px;border-radius:50%;pointer-events:none;z-index:1;filter:blur(120px);opacity:0.12}
+.glow-1{top:-150px;left:-100px;background:var(--blue)}
+.glow-2{bottom:-200px;right:-100px;background:var(--purple)}
+.glow-3{top:50%;left:50%;transform:translate(-50%,-50%);background:var(--teal);opacity:0.05}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+<canvas id="particles"></canvas>
+<div class="noise"></div>
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+<div class="glow glow-3"></div>
+
+<!-- SCENE 0: COLD OPEN -->
+<div class="scene active" data-scene="0" data-duration="4000">
+  <div class="cold-open">
+    <div class="phi">K–Φ</div>
+    <div class="tagline">Treasury Intelligence Platform</div>
+  </div>
+</div>
+
+<!-- SCENE 1: THE PROBLEM -->
+<div class="scene" data-scene="1" data-duration="7000">
+  <div class="problem">
+    <div class="scene-label">The Problem</div>
+    <h2>Treasury teams still rely on <em>spreadsheets</em><br>to bridge ERP data and cash forecasts</h2>
+    <div class="stats-row">
+      <div class="stat-block"><div class="stat-num" data-count="73">0</div><div class="stat-label">% of treasurers use Excel<br>as primary planning tool</div></div>
+      <div class="stat-block"><div class="stat-num" data-count="12">0</div><div class="stat-label">hours/week spent<br>on manual consolidation</div></div>
+      <div class="stat-block"><div class="stat-num" data-count="4">0</div><div class="stat-label">days average delay<br>from GL close to forecast</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCENE 2: HERO REVEAL -->
+<div class="scene" data-scene="2" data-duration="7000">
+  <div class="hero-reveal">
+    <div class="badge">✦ From GL to Insight in Minutes</div>
+    <h1>From General Ledger<br>to <span>Cash Forecast</span><br>in one click</h1>
+    <div class="sub">K-Φ transforms raw GL data into financial statements, driver-based budgets, scenario analysis, and cash flow intelligence — automatically.</div>
+  </div>
+</div>
+
+<!-- SCENE 3: WORKFLOW -->
+<div class="scene" data-scene="3" data-duration="8000">
+  <div class="workflow-scene">
+    <div class="scene-label">How It Works</div>
+    <h2>Five pillars. One integrated platform.</h2>
+    <div class="wf-pipeline">
+      <div class="wf-stage"><div class="wf-icon">⚡</div><div class="wf-name">Data Ingestion</div><div class="wf-desc">CSV/TSV import with smart field mapping, or direct ERP connector for SAP, Oracle, D365</div></div>
+      <div class="wf-stage"><div class="wf-icon">📊</div><div class="wf-name">Φ Statements</div><div class="wf-desc">Balance Sheet, P&L, Cash Flow & KPIs auto-generated from GL with full drill-down</div></div>
+      <div class="wf-stage"><div class="wf-icon">🎯</div><div class="wf-name">Φ Future</div><div class="wf-desc">Driver-based budgets, trend forecasts with seasonal decomposition & scenario analysis</div></div>
+      <div class="wf-stage"><div class="wf-icon">🔧</div><div class="wf-name">Live Forge</div><div class="wf-desc">Describe any change in plain English — K-Φ patches its own code. Per-tenant versions with instant rollback.</div></div>
+      <div class="wf-stage"><div class="wf-icon">🔄</div><div class="wf-name">Export & Approve</div><div class="wf-desc">Push to Kyriba, download Excel, generate PDF — with multi-level approval workflow</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCENE 4: FEATURE GRID -->
+<div class="scene" data-scene="4" data-duration="8000">
+  <div class="features-scene">
+    <div class="scene-label">Capabilities</div>
+    <h2>Everything treasury needs. Nothing it doesn't.</h2>
+    <div class="feat-grid">
+      <div class="feat-card"><div class="icon">📋</div><div class="name">Three-Statement Model</div><div class="desc">Auto-derived B/S, P&L, and indirect Cash Flow Statement from GL entries. Prior → Current → Delta drill-down.</div><div class="tag tag-live">Live</div></div>
+      <div class="feat-card"><div class="icon">🎯</div><div class="name">Driver-Based Budgeting</div><div class="desc">26 drivers across Revenue, COGS, Personnel, OpEx, Working Capital & Treasury. Seed from actuals with trend extrapolation.</div><div class="tag tag-live">Live</div></div>
+      <div class="feat-card"><div class="icon">🔀</div><div class="name">9-Lever Scenario Simulator</div><div class="desc">Staffing, revenue, inflation, AR/AP terms, capex, debt, FX, cost optimization. Full P&L + cash impact grid.</div><div class="tag tag-live">Live</div></div>
+      <div class="feat-card"><div class="icon">📈</div><div class="name">Multi-Version Analysis</div><div class="desc">Compare up to 24 monthly versions. Variance waterfall, trend charts, chronological tracking.</div><div class="tag tag-live">Live</div></div>
+      <div class="feat-card"><div class="icon">🏢</div><div class="name">Multi-Entity Consolidation</div><div class="desc">IC eliminations, multi-currency conversion, consolidated financial statements with OCI handling.</div><div class="tag tag-live">Live</div></div>
+      <div class="feat-card"><div class="icon">🔧</div><div class="name">Live Forge</div><div class="desc">Describe any change in plain English. K-Φ rewrites its own code — add KPIs, widgets, logic, reports. Per-tenant, versioned, one-click rollback.</div><div class="tag tag-ai">Experimental</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCENE 5: SELF-MODIFYING UI -->
+<div class="scene" data-scene="5" data-duration="9000">
+  <div class="ai-scene">
+    <div class="scene-label">And one more thing...</div>
+    <h2>The app that <span>rewrites itself</span></h2>
+    <div class="sub">K-Φ works out of the box. But if you want something different,<br>describe the change — the platform modifies its own interface. Versioned. Reversible.</div>
+    <div class="ai-terminal">
+      <div class="ai-term-bar">
+        <div class="ai-term-dot" style="background:#ff5f57"></div>
+        <div class="ai-term-dot" style="background:#febc2e"></div>
+        <div class="ai-term-dot" style="background:#28c840"></div>
+        <div class="ai-term-title">K-Φ LIVE FORGE &nbsp;·&nbsp; <span style="color:var(--gold);font-size:10px">EXPERIMENTAL</span></div>
+      </div>
+      <div class="ai-term-body">
+        <div class="ai-prompt">→ "Add a Debt / EBITDA gauge to my dashboard with a red zone above 3.5x"</div>
+        <br>
+        <div class="ai-response" id="ai-resp-1">✓ Reading your dashboard layout (L3842–3861)...</div>
+        <div class="ai-response" id="ai-resp-2">✓ Patching: +1 KPI card, gauge SVG, threshold at 3.5x</div>
+        <div class="ai-response" id="ai-resp-3">✓ Snapshot v4 created (1,084 KB). Diff: 3 changes.</div>
+        <div class="ai-response" id="ai-resp-4" style="color:var(--gold)">⚡ Preview ready. Apply to your tenant?</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCENE 6: ARCHITECTURE -->
+<div class="scene" data-scene="6" data-duration="7000">
+  <div class="arch-scene">
+    <div class="scene-label">Platform Architecture</div>
+    <h2>Four layers. Infinite customisation.</h2>
+    <div class="arch-layers">
+      <div class="arch-layer arch-l1"><div class="layer-num">Layer 01</div><div class="layer-icon">🏗️</div><div class="layer-name">Tenant Isolation</div><div class="layer-desc">Each tenant owns their instance. Fork, customise, rollback — full code autonomy.</div></div>
+      <div class="arch-layer arch-l2"><div class="layer-num">Layer 02</div><div class="layer-icon">🔧</div><div class="layer-name">Live Forge</div><div class="layer-desc">Self-modifying application — source-level patches, per-tenant forks, version control & rollback.</div></div>
+      <div class="arch-layer arch-l3"><div class="layer-num">Layer 03</div><div class="layer-icon">📬</div><div class="layer-name">Push Proposals</div><div class="layer-desc">Upstream platform updates that tenants accept, reject, or defer.</div></div>
+      <div class="arch-layer arch-l4"><div class="layer-num">Layer 04</div><div class="layer-icon">🏪</div><div class="layer-name">Marketplace</div><div class="layer-desc">Community-shared customisations, curated and version-managed.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCENE 7: SECURITY -->
+<div class="scene" data-scene="7" data-duration="7000">
+  <div class="security-scene">
+    <div class="scene-label">Security & Compliance</div>
+    <h2>Enterprise-grade. Zero compromise.</h2>
+    <div class="sec-list">
+      <div class="sec-item"><div class="sec-check">✓</div><div><div class="sec-name">Multi-Tenant Isolation</div><div class="sec-desc">Encrypted databases per tenant. No cross-tenant data leakage.</div></div></div>
+      <div class="sec-item"><div class="sec-check">✓</div><div><div class="sec-name">Two-Factor Authentication</div><div class="sec-desc">TOTP-based 2FA with configurable enforcement & backup codes.</div></div></div>
+      <div class="sec-item"><div class="sec-check">✓</div><div><div class="sec-name">Role-Based Access Control</div><div class="sec-desc">Owner, Admin, Editor, Viewer with entity-level permissions.</div></div></div>
+      <div class="sec-item"><div class="sec-check">✓</div><div><div class="sec-name">Comprehensive Audit Trail</div><div class="sec-desc">Every action logged. SOX-ready compliance tracking.</div></div></div>
+      <div class="sec-item"><div class="sec-check">✓</div><div><div class="sec-name">Approval Workflows</div><div class="sec-desc">Multi-level L1/L2 gating with separation of duties.</div></div></div>
+      <div class="sec-item"><div class="sec-check">✓</div><div><div class="sec-name">Version Snapshots</div><div class="sec-desc">Instant rollback. Milestone history with full parent tracking.</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCENE 8: CTA -->
+<div class="scene" data-scene="8" data-duration="10000">
+  <div class="cta-scene">
+    <h2>Ready to transform<br><span>your treasury?</span></h2>
+    <div class="sub">See K-Φ in action with your own data. No commitment, no credit card, no lengthy onboarding.</div>
+    <div class="cta-btns">
+      <a href="/cdn-cgi/l/email-protection#e4878b8a90858790a48fc9948c8dca878b89" class="cta-btn cta-primary">Request a Demo</a>
+      <a href="https://k-phi.com" target="_blank" class="cta-btn cta-ghost">▶ Try the Live Demo</a>
+    </div>
+    <div class="cta-url">
+      <a href="https://k-phi.com">k-phi.com</a>
+    </div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-wrap" id="progress"></div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <span class="timer" id="timer">00:00</span>
+  <button class="ctrl-btn" id="prevBtn" title="Previous">◂</button>
+  <button class="ctrl-btn" id="playBtn" title="Play/Pause">❚❚</button>
+  <button class="ctrl-btn" id="nextBtn" title="Next">▸</button>
+</div>
+
+<script>
+// ═══ PARTICLE SYSTEM ═══
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let particles = [];
+function resizeCanvas(){canvas.width=1920;canvas.height=1080}
+window.addEventListener('resize',resizeCanvas);resizeCanvas();
+
+/* ═══ VIEWPORT SCALING ═══ */
+function fitStage(){
+  var s=Math.min(window.innerWidth/1920,window.innerHeight/1080);
+  var stage=document.getElementById('stage');
+  stage.style.transform='scale('+s+')';
+  stage.style.marginLeft=((window.innerWidth-1920*s)/2)+'px';
+  stage.style.marginTop=((window.innerHeight-1080*s)/2)+'px';
+}
+window.addEventListener('resize',fitStage);fitStage();
+
+class Particle{
+  constructor(){this.reset()}
+  reset(){
+    this.x=Math.random()*canvas.width;this.y=Math.random()*canvas.height;
+    this.vx=(Math.random()-0.5)*0.3;this.vy=(Math.random()-0.5)*0.3;
+    this.size=Math.random()*1.5+0.5;this.opacity=Math.random()*0.3+0.05;
+    this.color=(['#3b82f6','#a78bfa','#22d3a7','#d4a843'])[Math.floor(Math.random()*4)]
+  }
+  update(){
+    this.x+=this.vx;this.y+=this.vy;
+    if(this.x<0||this.x>canvas.width||this.y<0||this.y>canvas.height)this.reset()
+  }
+  draw(){
+    ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    ctx.fillStyle=this.color;ctx.globalAlpha=this.opacity;ctx.fill();ctx.globalAlpha=1
+  }
+}
+for(let i=0;i<60;i++)particles.push(new Particle());
+function animateParticles(){ctx.clearRect(0,0,canvas.width,canvas.height);particles.forEach(p=>{p.update();p.draw()});requestAnimationFrame(animateParticles)}
+animateParticles();
+
+// ═══ SCENE ENGINE ═══
+const scenes = document.querySelectorAll('.scene');
+const totalScenes = scenes.length;
+let currentScene = 0;
+let playing = true;
+let sceneTimer = null;
+let elapsed = 0;
+let elapsedInterval = null;
+
+// Build progress dots
+const progressWrap = document.getElementById('progress');
+for(let i=0;i<totalScenes;i++){
+  const dot=document.createElement('div');dot.className='progress-dot'+(i===0?' active':'');
+  dot.addEventListener('click',()=>goToScene(i));progressWrap.appendChild(dot)
+}
+function updateProgress(){
+  document.querySelectorAll('.progress-dot').forEach((d,i)=>{
+    d.className='progress-dot'+(i===currentScene?' active':(i<currentScene?' done':''))
+  })
+}
+
+function goToScene(n){
+  if(n<0||n>=totalScenes||n===currentScene)return;
+  const cur=scenes[currentScene];const nxt=scenes[n];
+  cur.classList.add('exiting');cur.classList.remove('active');
+  setTimeout(()=>{cur.classList.remove('exiting')},1200);
+  currentScene=n;nxt.classList.add('active');
+  updateProgress();triggerSceneAnimations(n);scheduleNext()
+}
+
+function triggerSceneAnimations(n){
+  const scene=scenes[n];
+  // Workflow stages stagger
+  if(n===3){
+    scene.querySelectorAll('.wf-stage').forEach((s,i)=>{
+      setTimeout(()=>s.classList.add('visible'),400+i*350)
+    })
+  }
+  // Feature cards stagger
+  if(n===4){
+    scene.querySelectorAll('.feat-card').forEach((c,i)=>{
+      setTimeout(()=>c.classList.add('visible'),300+i*250)
+    })
+  }
+  // AI typing
+  if(n===5){
+    [['ai-resp-1',1500],['ai-resp-2',3000],['ai-resp-3',4500],['ai-resp-4',6000]].forEach(([id,delay])=>{
+      setTimeout(()=>{const el=document.getElementById(id);if(el)el.classList.add('typed')},delay)
+    })
+  }
+  // Architecture layers
+  if(n===6){
+    scene.querySelectorAll('.arch-layer').forEach((l,i)=>{
+      setTimeout(()=>l.classList.add('visible'),400+i*300)
+    })
+  }
+  // Security items
+  if(n===7){
+    scene.querySelectorAll('.sec-item').forEach((s,i)=>{
+      setTimeout(()=>s.classList.add('visible'),300+i*200)
+    })
+  }
+  // Counter animation for problem stats
+  if(n===1){
+    scene.querySelectorAll('[data-count]').forEach((el,i)=>{
+      const target=parseInt(el.dataset.count);
+      setTimeout(()=>{
+        let cur=0;const step=Math.max(1,Math.floor(target/30));
+        const iv=setInterval(()=>{cur+=step;if(cur>=target){cur=target;clearInterval(iv)}
+          el.textContent=cur+(target===73?'%':'')},40)
+      },1200+i*300)
+    })
+  }
+}
+
+function scheduleNext(){
+  clearTimeout(sceneTimer);
+  if(!playing)return;
+  const dur=parseInt(scenes[currentScene].dataset.duration)||6000;
+  sceneTimer=setTimeout(()=>{
+    if(currentScene<totalScenes-1)goToScene(currentScene+1)
+    else{playing=false;updatePlayBtn()}
+  },dur)
+}
+
+// Timer
+function updateTimer(){
+  elapsed++;const m=String(Math.floor(elapsed/60)).padStart(2,'0');const s=String(elapsed%60).padStart(2,'0');
+  document.getElementById('timer').textContent=m+':'+s
+}
+elapsedInterval=setInterval(updateTimer,1000);
+
+// Controls
+const playBtn=document.getElementById('playBtn');
+const prevBtn=document.getElementById('prevBtn');
+const nextBtn=document.getElementById('nextBtn');
+
+function updatePlayBtn(){playBtn.textContent=playing?'❚❚':'▶'}
+playBtn.addEventListener('click',()=>{
+  playing=!playing;updatePlayBtn();
+  if(playing){scheduleNext();elapsedInterval=setInterval(updateTimer,1000)}
+  else{clearTimeout(sceneTimer);clearInterval(elapsedInterval)}
+});
+prevBtn.addEventListener('click',()=>goToScene(currentScene-1));
+nextBtn.addEventListener('click',()=>goToScene(currentScene+1));
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' ')goToScene(currentScene+1);
+  if(e.key==='ArrowLeft')goToScene(currentScene-1);
+  if(e.key==='p'){playing=!playing;updatePlayBtn();if(playing){scheduleNext();elapsedInterval=setInterval(updateTimer,1000)}else{clearTimeout(sceneTimer);clearInterval(elapsedInterval)}}
+});
+
+// Auto-start
+triggerSceneAnimations(0);
+scheduleNext();
+</script>
+</div><!-- /stage -->
+</body>
+</html>
